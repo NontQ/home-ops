@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: ingress-nginx
-      version: 4.7.1
+      version: 4.8.3
       sourceRef:
         kind: HelmRepository
         name: ingress-nginx
@@ -47,7 +47,9 @@ spec:
             - key: ingress-class
               operator: In
               values: ["external"]
+      allowSnippetAnnotations: true
       config:
+        block-user-agents: "GPTBot,~*GPTBot*,ChatGPT-User,~*ChatGPT-User*,Google-Extended,~*Google-Extended*,CCBot,~*CCBot*,Omgilibot,~*Omgilibot*,FacebookBot,~*FacebookBot*" # taken from https://github.com/superseriousbusiness/gotosocial/blob/main/internal/web/robots.go
         client-body-buffer-size: 100M
         client-body-timeout: 120
         client-header-timeout: 120

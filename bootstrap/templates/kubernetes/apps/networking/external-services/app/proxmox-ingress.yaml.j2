@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxmox
+spec:
+  externalName: 192.168.1.100
+  ports:
+  - name: https
+    port: 8006
+    protocol: TCP
+    targetPort: 8006
+  sessionAffinity: None
+  type: ExternalName
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proxmox
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" #important
+    nginx.ingress.kubernetes.io/whitelist-source-range: |
+      10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    hajimari.io/enable: "true"
+    hajimari.io/icon: "simple-icons:proxmox"
+    hajimari.io/appName: Proxmox
+    hajimari.io/info: Proxmox Virtual Environment
+    hajimari.io/group: Infrastructure
+spec:
+  ingressClassName: internal
+  rules:
+  - host: pve.${SECRET_DOMAIN}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: proxmox
+            port:
+              number: 8006
+  tls:
+    - hosts:
+      - "pve.${SECRET_DOMAIN}"

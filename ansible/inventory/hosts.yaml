@@ -1,0 +1,8 @@
+---
+kubernetes:
+  children:
+    master:
+      hosts:
+        kube0:
+          ansible_user: k8m1
+          ansible_host: 192.168.1.108

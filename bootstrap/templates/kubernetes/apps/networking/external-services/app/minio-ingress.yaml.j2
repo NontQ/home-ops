@@ -1,0 +1,83 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio
+  annotations:
+    # external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+    hajimari.io/enable: "true"
+    hajimari.io/icon: "simple-icons:minio"
+    hajimari.io/appName: Minio
+    hajimari.io/info: Object Based Storage
+    hajimari.io/group: Infrastructure
+spec:
+  ingressClassName: internal
+  rules:
+    - host: &host minio.${SECRET_DOMAIN}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9002
+  tls:
+    - hosts:
+        - *host
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-api
+  annotations:
+    # external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1024m
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      chunked_transfer_encoding off;
+spec:
+  ingressClassName: internal
+  rules:
+    - host: &api-host s3.${SECRET_DOMAIN}
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9000
+  tls:
+    - hosts:
+        - *api-host
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: minio
+subsets:
+  - addresses:
+      - ip: 192.168.1.104
+    ports:
+      - name: api
+        port: 9000
+        protocol: TCP
+      - name: http
+        port: 9002
+        protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  ports:
+    - name: api
+      port: 9000
+    - name: http
+      port: 9002
+  type: ClusterIP
