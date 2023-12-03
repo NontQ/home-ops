@@ -1,0 +1,124 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: &app vikunja
+  namespace: collaboration
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: app-template
+      version: 2.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      main:
+        type: statefulset
+        annotations:
+          reloader.stakater.com/auto: "true"
+          secret.reloader.stakater.com/reload: &secret vikunja-secret
+          configmap.reloader.stakater.com/reload: vikunja-configmap
+        initContainers:
+          01-init-db:
+            image:
+              repository: ghcr.io/onedr0p/postgres-init
+              tag: 15.5
+              imagePullPolicy: IfNotPresent
+            envFrom: &envFrom
+              - secretRef:
+                  name: vikunja-secret
+
+        containers:
+          main:
+            image:
+              repository: vikunja/api
+              tag: 0.21.0
+            envFrom: *envFrom
+            env:
+              VIKUNJA_SERVICE_TIMEZONE: America/Toronto
+              VIKUNJA_SERVICE_FRONTENDURL: https://tasks.${SECRET_DOMAIN}
+              VIKUNJA_MAILER_ENABLED: "true"
+              VIKUNJA_MAILER_HOST: smtp-relay.default.svc.cluster.local
+              VIKUNJA_MAILER_PORT: "2525"
+              VIKUNJA_MAILER_FROMEMAIL: Vikunja <vikunja@${SECRET_DOMAIN}>
+              # VIKUNJA_MAILER_AUTHTYPE: login
+              VIKUNJA_DATABASE_TYPE: postgres
+            resources:
+              requests:
+                cpu: 5m
+                memory: 10Mi
+              limits:
+                memory: 100Mi
+          frontend:
+            image:
+              repository: vikunja/frontend
+              tag: 0.21.0
+          proxy:
+            image:
+              repository: caddy
+              tag: 2.7.5-alpine
+        statefulset:
+          volumeClaimTemplates:
+            - name: config
+              accessMode: ReadWriteOnce
+              size: 1Gi
+              storageClass: local-hostpath #nfs
+              globalMounts:
+                - path: /app/vikunja/files
+
+    service:
+      main:
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: internal
+        annotations:
+          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          hajimari.io/enable: "true"
+          hajimari.io/appName: "Tasks"
+          hajimari.io/group: Collaboration
+          hajimari.io/icon: "mdi:format-list-checks"
+          hajimari.io/info: "The open-source, self-hostable to-do app."
+        hosts:
+          - host: &host "tasks.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                service:
+                  name: main
+                  port: http
+        tls:
+          - hosts:
+              - *host
+
+    persistence:
+      caddy-config:
+        type: configMap
+        name: vikunja-configmap
+        globalMounts:
+          - path: /etc/caddy/Caddyfile
+            subPath: Caddyfile
+      vikunja-config:
+        type: configMap
+        name: vikunja-configmap
+        globalMounts:
+          - path: /etc/vikunja/config.yml
+            subPath: config.yml

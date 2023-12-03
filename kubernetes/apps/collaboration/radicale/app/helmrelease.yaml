@@ -1,0 +1,104 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: radicale
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: app-template
+      version: 2.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+
+    controllers:
+      main:
+        annotations:
+          reloader.stakater.com/auto: "true"
+
+        containers:
+          main:
+            image:
+              repository: ghcr.io/bjw-s/radicale
+              tag: 3.1.8
+            resources:
+              requests:
+                cpu: 15m
+                memory: 79M
+              limits:
+                memory: 79M
+
+    service:
+      main:
+        ports:
+          http:
+            port: 5232
+
+    ingress:
+      main:
+        enabled: true
+        className: external
+        annotations:
+          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          hajimari.io/enable: "true"
+          hajimari.io/appName: "Radicale"
+          hajimari.io/group: Collaboration
+          hajimari.io/icon: mdi:calendar-export-outline
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/icon: radicale.png
+          gethomepage.dev/name: Calendar
+          gethomepage.dev/group: System
+        hosts:
+        - host: cal.${SECRET_DOMAIN}
+          paths:
+          - path: /
+            service:
+              name: main
+              port: http
+        tls:
+        - hosts:
+          - cal.${SECRET_DOMAIN}
+
+    persistence:
+      data:
+        enabled: true
+        existingClaim: data-radicale
+        # mountPath: /data
+        globalMounts:
+        - path: /data
+      config:
+        enabled: true
+        type: configMap
+        name: radicale-configmap
+        globalMounts:
+        - path: /config/config
+          subPath: config.cfg
+          readOnly: true
+      auth:
+        enabled: true
+        type: secret
+        name: radicale-secret
+        globalMounts:
+        - path: /config/users
+          subPath: users
+          readOnly: true

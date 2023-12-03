@@ -1,0 +1,112 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: vikunja-volsync-secret
+  # namespace: collaboration
+spec:
+  target:
+    deletionPolicy: Delete
+    template:
+      type: Opaque
+      data:
+        # App
+        RESTIC_REPOSITORY: '{{ .REPOSITORY_TEMPLATE }}/vikunja'
+        RESTIC_PASSWORD: '{{ .RESTIC_PASSWORD }}'
+        AWS_ACCESS_KEY_ID: '{{ .MINIO_ROOT_USER }}'
+        AWS_SECRET_ACCESS_KEY: '{{ .MINIO_ROOT_PASSWORD }}'
+  data:
+  - secretKey: REPOSITORY_TEMPLATE
+    sourceRef:
+      storeRef:
+        name: bitwarden-fields
+        kind: ClusterSecretStore
+    remoteRef:
+      key: 7f9b60ba-8916-4d96-9c37-b0bf000f0d2e
+      property: REPOSITORY_TEMPLATE
+  - secretKey: RESTIC_PASSWORD
+    sourceRef:
+      storeRef:
+        name: bitwarden-fields
+        kind: ClusterSecretStore
+    remoteRef:
+      key: 7f9b60ba-8916-4d96-9c37-b0bf000f0d2e
+      property: RESTIC_PASSWORD
+  - secretKey: AWS_ACCESS_KEY_ID
+    sourceRef:
+      storeRef:
+        name: bitwarden-fields
+        kind: ClusterSecretStore
+    remoteRef:
+      key: 3cab8b9c-3bd7-49f8-a7d2-b0b60104f6b3
+      property: AWS_ACCESS_KEY_ID
+  - secretKey: AWS_SECRET_ACCESS_KEY
+    sourceRef:
+      storeRef:
+        name: bitwarden-fields
+        kind: ClusterSecretStore
+    remoteRef:
+      key: 3cab8b9c-3bd7-49f8-a7d2-b0b60104f6b3
+      property: AWS_SECRET_ACCESS_KEY
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vikunja-files
+  namespace: collaboration
+spec:
+  accessModes: ["ReadWriteMany"]
+  dataSourceRef:
+    kind: ReplicationDestination
+    apiGroup: volsync.backube
+    name: vikunja-rdst
+  resources:
+    requests:
+      storage: 5Gi # must match the ReplicationDestination `.spec.capacity` below
+  storageClassName: nfs
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: vikunja-files
+  namespace: collaboration
+spec:
+  sourcePVC: vikunja-files
+  trigger:
+    schedule: "15 */8 * * *"
+  restic:
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    repository: vikunja-volsync-secret
+    volumeSnapshotClassName: nfs
+    cacheCapacity: 8Gi
+    cacheStorageClassName: local-path
+    cacheAccessModes: ["ReadWriteOnce"]
+    storageClassName: nfs
+    accessModes: ["ReadWriteMany"]
+    moverSecurityContext:
+      runAsUser: 568
+      runAsGroup: 568
+      fsGroup: 568
+    retain:
+      daily: 7
+      within: 3d
+# ---
+# apiVersion: volsync.backube/v1alpha1
+# kind: ReplicationDestination
+# metadata:
+#   name: vikunja-rdst
+#   annotations:
+#     kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+# spec:
+#   trigger:
+#     manual: restore-once
+#   restic:
+#     repository: vikunja-volsync-secret
+#     copyMethod: Snapshot
+#     volumeSnapshotClassName: nfs
+#     cacheStorageClassName: local-path
+#     cacheAccessModes: ["ReadWriteOnce"]
+#     cacheCapacity: 8Gi
+#     storageClassName: nfs
+#     accessModes: ["ReadWriteMany"]
+#     capacity: 5Gi # must match the PersistentVolumeClaim `.resources.requests.storage` size above
