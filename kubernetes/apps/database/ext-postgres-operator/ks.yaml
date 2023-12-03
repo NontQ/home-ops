@@ -12,7 +12,7 @@ spec:
   dependsOn:
     - name: external-secrets-bitwarden
     - name: cloudnative-pg-cluster
-  path: ./kubernetes/main/apps/database/ext-postgres-operator/app
+  path: ./kubernetes/apps/database/ext-postgres-operator/app
   prune: true
   sourceRef:
     kind: GitRepository

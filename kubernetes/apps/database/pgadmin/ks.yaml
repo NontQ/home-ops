@@ -12,7 +12,7 @@ spec:
   dependsOn:
     - name: external-secrets-bitwarden
     - name: cloudnative-pg-cluster
-  path: ./kubernetes/main/apps/database/pgadmin/app
+  path: ./kubernetes/apps/database/pgadmin/app
   prune: true
   sourceRef:
     kind: GitRepository
