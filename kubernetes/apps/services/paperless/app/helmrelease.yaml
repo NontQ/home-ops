@@ -126,7 +126,7 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: paperless-config-v2
+        existingClaim: paperless-config-v1
         advancedMounts:
           main:
             main:
