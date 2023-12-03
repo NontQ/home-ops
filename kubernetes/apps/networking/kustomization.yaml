@@ -9,3 +9,4 @@ resources:
   - ./external-services/ks.yaml
   - ./k8s-gateway/ks.yaml
   - ./nginx/ks.yaml
+  - ./smtp-relay/ks.yaml
