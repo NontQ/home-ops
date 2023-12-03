@@ -1,0 +1,122 @@
+---
+web:
+  port: ${CUSTOM_WEB_PORT}
+storage:
+  type: postgres
+  path: postgres://${INIT_POSTGRES_USER}:${INIT_POSTGRES_PASS}@${INIT_POSTGRES_HOST}:5432/${INIT_POSTGRES_DBNAME}?sslmode=disable
+  caching: true
+metrics: true
+debug: false
+ui:
+  title: Status | Gatus
+  header: Status
+alerting:
+  pushover:
+    application-token: ${PUSHOVER_API_TOKEN_GATUS}
+    user-key: ${PUSHOVER_API_USERKEY}
+    default-alert:
+      description: health-check failed
+      send-on-resolved: true
+      failure-threshold: 5
+      success-threshold: 2
+connectivity:
+  checker:
+    target: 1.1.1.1:53
+    interval: 1m
+endpoints:
+  # - name: status
+  #   group: external
+  #   url: "status.${SECRET_DOMAIN}"
+  #   interval: 1m
+  #   client:
+  #     dns-resolver: tcp://1.1.1.1:53
+  #   conditions:
+  #     - "[STATUS] == 200"
+  #   alerts:
+  #     - type: pushover
+  - name: Proxmox
+    group: "Infrastructure"
+    url: https://192.168.1.100:8006
+    interval: 1m
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+      insecure: true
+    conditions:
+    - "[STATUS] == 200"
+    ui:
+      hide-hostname: true
+      hide-url: true
+    badge:
+      response-time:
+        thresholds: [550, 850, 1350, 1650, 1750]
+    alerts:
+    - type: pushover
+  - name: TrueNas
+    group: "Infrastructure"
+    url: http://192.168.1.104
+    interval: 1m
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+      insecure: true
+    conditions:
+    - "[STATUS] == 200"
+    ui:
+      hide-hostname: true
+      hide-url: true
+    badge:
+      response-time:
+        thresholds: [550, 850, 1350, 1650, 1750]
+    alerts:
+    - type: pushover
+  - name: Minio
+    group: "Infrastructure"
+    url: http://192.168.1.104:9002/browser
+    interval: 1m
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+      insecure: true
+    conditions:
+    - "[STATUS] == 200"
+    ui:
+      hide-hostname: true
+      hide-url: true
+    badge:
+      response-time:
+        thresholds: [550, 850, 1350, 1650, 1750]
+    alerts:
+    - type: pushover
+  - name: AdGuard Home
+    group: "DNS"
+    url: http://192.168.1.102
+    interval: 1m
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+      insecure: true
+    conditions:
+    - "[STATUS] == 200"
+    ui:
+      hide-hostname: true
+      hide-url: true
+    badge:
+      response-time:
+        thresholds: [550, 850, 1350, 1650, 1750]
+    alerts:
+    - type: pushover
+  - name: Pi-Hole
+    group: "DNS"
+    url: http://192.168.1.101/admin
+    interval: 1m
+    client:
+      dns-resolver: tcp://1.1.1.1:53
+      insecure: true
+    conditions:
+    - "[STATUS] == 200"
+    ui:
+      hide-hostname: true
+      hide-url: true
+    badge:
+      response-time:
+        thresholds: [550, 850, 1350, 1650, 1750]
+    alerts:
+    - type: pushover
+

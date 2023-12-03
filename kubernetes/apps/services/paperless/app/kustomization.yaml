@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # - ./database.yaml
+  - ./externalsecret.yaml
+  - ./pvc.yaml
+  - ./helmrelease.yaml
+  # - ./gatus.yaml
+  # - ./volsync.yaml
+# labels:
+#   - pairs:
+#       app.kubernetes.io/name: paperless
+#       app.kubernetes.io/instance: paperless
+#       app.kubernetes.io/part-of: paperless
